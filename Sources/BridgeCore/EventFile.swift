@@ -41,7 +41,7 @@ public enum EventFile {
     }
 
     /// The title as typed, trimmed; `Untitled` when there is none.
-    static func displayTitle(_ t: String) -> String {
+    public static func displayTitle(_ t: String) -> String {
         nonEmpty(t) ?? "Untitled"
     }
 
