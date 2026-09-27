@@ -93,9 +93,23 @@ public final class Sync {
             stems[Vault.stem(path).lowercased(), default: 0] += 1
         }
         // Contacts first: attendee links read their current names (§6.4).
+        // A card is projected once: Exchange shows its contacts folder as a
+        // container of its own beside the account, holding the same cards,
+        // so a card an earlier account already gave is skipped.
+        var given: [String: String] = [:]
         for a in accounts {
-            if let contacts = records(a.contacts, a, kind: .contact) {
-                for c in contacts.sorted(by: { ($0.name, $0.uid) < ($1.name, $1.uid) }) { try contact(c, a) }
+            guard let contacts = records(a.contacts, a, kind: .contact) else { continue }
+            var skipped: [String: Int] = [:]
+            for c in contacts.sorted(by: { ($0.name, $0.uid) < ($1.name, $1.uid) }) {
+                if let earlier = given[c.uid] {
+                    skipped[earlier, default: 0] += 1
+                    continue
+                }
+                given[c.uid] = a.folder
+                try contact(c, a)
+            }
+            for (earlier, n) in skipped.sorted(by: { $0.key < $1.key }) {
+                report.problems.append("\(a.folder): \(n) contacts are the same cards as \(earlier)'s; skipped")
             }
         }
         for a in accounts { try deletions(a, kind: .contact, read: a.contacts.isComplete, empty: a.contacts.isEmpty) }

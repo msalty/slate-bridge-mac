@@ -346,6 +346,17 @@ import Testing
         #expect(try #require(h.read(officeClosed)).contains("calendar: Personal\n"))
     }
 
+    @Test func aCardInTwoContainersIsProjectedOnce() throws {
+        let h = try Harness()
+        // Exchange's contacts folder, shown as a container beside its account.
+        let work = h.records.accounts.first { $0.source == "work" }!
+        h.records.accounts.append(RecordSet.Account(source: "work-folder", folder: "Contacts", contacts: work.contacts, events: nil))
+        let r = try h.sync()
+        #expect(r.problems == ["Contacts: 1 contacts are the same cards as Work's; skipped"])
+        #expect(!h.tree().keys.contains { $0.hasPrefix("Contacts/Address Book/Contacts/") })
+        #expect(h.exists(janeWork))
+    }
+
     @Test func unreadableManifestIsAnErrorNotAnEmptyOne() throws {
         let h = try Harness()
         try "not json".write(to: h.store.url, atomically: true, encoding: .utf8)
