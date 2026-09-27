@@ -4,12 +4,13 @@ import BridgeWriter
 import Foundation
 
 let usage = """
-    usage: slate-bridge sync --vault DIR --records FILE [options]
+    usage: slate-bridge sync --vault DIR (--records FILE | --live) [options]
            slate-bridge dump contacts [--summary | --container ID]
            slate-bridge dump calendars [--summary | --calendar ID]
 
-    sync runs one sync into DIR from records in FILE (the format of
-    Tests/Fixtures/records.json): the whole pipeline, no permissions needed.
+    sync runs one sync into DIR, from records in FILE (the format of
+    Tests/Fixtures/records.json, no permissions needed) or --live from this
+    Mac's calendars and contacts (macOS asks for access the first time).
 
       --state FILE          the manifest (default: ~/Library/Application
                             Support/slate-bridge-mac/<vault id>.json)
@@ -18,6 +19,9 @@ let usage = """
       --attendee-cap N      no attendee list above N (default 12)
       --confirm SOURCE      delete for SOURCE even though its read came back
                             empty (repeatable)
+      --selection FILE      with --live, which calendars and contacts accounts
+                            to read (default: beside the manifest, made from
+                            the defaults on first use; edit it to change them)
 
     dump contacts prints every contacts account (container) as JSON, or with
     --container ID the records that account would project. It reads the real
@@ -239,16 +243,20 @@ args.removeFirst()
 
 var vault: URL?
 var recordsFile: URL?
+var live = false
 var state: URL?
+var selectionFile: URL?
 var options = SyncOptions()
 while !args.isEmpty {
     let flag = args.removeFirst()
+    if flag == "--live" { live = true; continue }
     guard let value = args.first else { fail("\(flag) needs a value") }
     args.removeFirst()
     switch flag {
     case "--vault": vault = URL(fileURLWithPath: value, isDirectory: true)
     case "--records": recordsFile = URL(fileURLWithPath: value)
     case "--state": state = URL(fileURLWithPath: value)
+    case "--selection": selectionFile = URL(fileURLWithPath: value)
     case "--window-start":
         guard let d = CivilDate(string: value) else { fail("--window-start wants YYYY-MM-DD") }
         options.windowStart = d
@@ -260,16 +268,50 @@ while !args.isEmpty {
     }
 }
 guard let vault else { fail("--vault is required\n\n\(usage)") }
-guard let recordsFile else { fail("--records is required (reading calendars and contacts is not built yet)") }
+guard live != (recordsFile != nil) else { fail("give one of --records FILE or --live\n\n\(usage)") }
 var isDir: ObjCBool = false
 guard FileManager.default.fileExists(atPath: vault.path, isDirectory: &isDir), isDir.boolValue else {
     fail("no such folder: \(vault.path)")
 }
 
+func note(_ s: String) { FileHandle.standardError.write(Data("\(s)\n".utf8)) }
+
 do {
-    let records = try JSONDecoder().decode(RecordSet.self, from: Data(contentsOf: recordsFile))
     let store = state.map(ManifestStore.init(url:)) ?? .standard(vault: vault)
-    let report = try Sync.run(vault: vault, store: store, accounts: AccountRead.from(records), options: options)
+    let accounts: [AccountRead]
+    if live {
+        let sources = LiveSources()
+        let access = await sources.requestAccess()
+        if !access.calendars { note("no Calendars access: calendars will not be read") }
+        if !access.contacts { note("no Contacts access: contacts will not be read") }
+        // The selection is kept beside the manifest: made from the defaults
+        // the first time, then read back, so a calendar that goes missing
+        // later fails its account's read instead of vanishing from it.
+        let file = selectionFile ?? store.url.deletingPathExtension().appendingPathExtension("selection.json")
+        let selection: LiveSources.Selection
+        if FileManager.default.fileExists(atPath: file.path) {
+            selection = try JSONDecoder().decode(LiveSources.Selection.self, from: Data(contentsOf: file))
+        } else {
+            selection = sources.defaultSelection()
+            let enc = JSONEncoder()
+            enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try enc.encode(selection).write(to: file, options: .atomic)
+            note("wrote the default selection to \(file.path)")
+        }
+        let titles = Dictionary(sources.events.calendars().map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a })
+        for key in selection.accounts {
+            let cals = (selection.calendars[key] ?? []).map { titles[$0] ?? "(missing)" }.sorted()
+            note("\(selection.names[key] ?? key): calendars \(cals.joined(separator: ", ")); \(selection.containers[key]?.count ?? 0) contacts containers")
+        }
+        let (window, firstDay) = Window.around(Date())
+        options.windowStart = options.windowStart ?? firstDay
+        accounts = sources.read(selection, window: window)
+    } else {
+        let records = try JSONDecoder().decode(RecordSet.self, from: Data(contentsOf: recordsFile!))
+        accounts = AccountRead.from(records)
+    }
+    let report = try Sync.run(vault: vault, store: store, accounts: accounts, options: options)
     print(report)
     exit(report.problems.isEmpty ? 0 : 1)
 } catch {
