@@ -377,3 +377,26 @@ extension Harness {
         return out
     }
 }
+
+@Suite struct ExplainTests {
+    @Test func namesWhatChangedWithoutValues() {
+        let old = "---\ntitle: A\nstart: 2026-09-21T09:00\nattendees:\n  - \"x\"\n  - \"y\"\nsource: s\nuid: u\n---\n\n# A\n"
+        let reordered = old.replacingOccurrences(of: "  - \"x\"\n  - \"y\"", with: "  - \"y\"\n  - \"x\"")
+        #expect(Explain.changes(from: old, to: reordered) == ["attendees (order only)"])
+        let moved = old.replacingOccurrences(of: "09:00", with: "10:00") + "\nMore.\n"
+        #expect(Explain.changes(from: old, to: moved) == ["start", "body"])
+        let located = old.replacingOccurrences(of: "source: s", with: "location: Room\nsource: s")
+        #expect(Explain.changes(from: old, to: located) == ["location (added)"])
+    }
+
+    @Test func syncReportsItWhenAsked() throws {
+        let h = try Harness()
+        try h.sync()
+        h.options.explain = true
+        h.editEvent("3f2a9c@fastmail.com") { $0.location = "Room 5A" }
+        let r = try h.sync()
+        #expect(r.details[designReview] == ["location"])
+        #expect(r.description.contains("changed: location"))
+        #expect(!r.description.contains("Room 5A"))
+    }
+}

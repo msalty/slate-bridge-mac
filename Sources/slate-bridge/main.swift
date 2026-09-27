@@ -19,6 +19,8 @@ let usage = """
       --attendee-cap N      no attendee list above N (default 12)
       --confirm SOURCE      delete for SOURCE even though its read came back
                             empty (repeatable)
+      --explain             for each updated file, which keys changed (names
+                            only, no values)
       --selection FILE      with --live, which calendars and contacts accounts
                             to read (default: beside the manifest, made from
                             the defaults on first use; edit it to change them)
@@ -250,6 +252,7 @@ var options = SyncOptions()
 while !args.isEmpty {
     let flag = args.removeFirst()
     if flag == "--live" { live = true; continue }
+    if flag == "--explain" { options.explain = true; continue }
     guard let value = args.first else { fail("\(flag) needs a value") }
     args.removeFirst()
     switch flag {

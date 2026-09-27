@@ -7,6 +7,8 @@ public struct SyncOptions: Sendable {
     public var attendeeCap = AttendeeLinking.defaultCap
     /// The window's first day, to report why an event went (§6.3).
     public var windowStart: CivilDate?
+    /// Say which keys changed in each updated file (names only, no values).
+    public var explain = false
     /// Accounts whose empty read the owner has confirmed ("Confirm
     /// deletions"): their deletions go ahead.
     public var confirmedEmpty: Set<String> = []
@@ -21,6 +23,8 @@ public struct SyncReport: Sendable, CustomStringConvertible {
 
     public var changes: [Change] = []
     public var unchanged = 0
+    /// With `SyncOptions.explain`: per updated path, what changed in it.
+    public var details: [String: [String]] = [:]
     /// Worth the owner's attention: failed reads, hand edits, duplicates.
     public var problems: [String] = []
     /// Live files by kind after the run.
@@ -31,7 +35,7 @@ public struct SyncReport: Sendable, CustomStringConvertible {
         var lines = changes.map { c -> String in
             switch c {
             case .created(let p): "created  \(p)"
-            case .updated(let p): "updated  \(p)"
+            case .updated(let p): "updated  \(p)" + (details[p].map { "\n         changed: " + $0.joined(separator: ", ") } ?? "")
             case .moved(let a, let b): "moved    \(a) → \(b)"
             case .deleted(let p, let why): "deleted  \(p) (\(why))"
             }
@@ -335,7 +339,9 @@ public final class Sync {
         // A new name is chosen clear of every file there; this is the last
         // guard against writing over one the helper does not own.
         if created, vault.exists(path) { throw SyncError.occupied(path) }
+        let before = options.explain && !created ? vault.read(path).map { String(decoding: $0, as: UTF8.self) } : nil
         if try vault.write(text, to: path) {
+            if let before { report.details[path] = Explain.changes(from: before, to: text) }
             report.changes.append(created ? .created(path) : .updated(path))
         } else {
             report.unchanged += 1
