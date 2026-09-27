@@ -1,14 +1,15 @@
 import BridgeCore
+import BridgeSources
 import BridgeWriter
 import Foundation
 
 let usage = """
     usage: slate-bridge sync --vault DIR --records FILE [options]
+           slate-bridge dump contacts [--container ID]
 
-    Runs one sync into DIR from records in FILE (the format of
-    Tests/Fixtures/records.json) — the whole pipeline, no permissions needed.
+    sync runs one sync into DIR from records in FILE (the format of
+    Tests/Fixtures/records.json): the whole pipeline, no permissions needed.
 
-    options:
       --state FILE          the manifest (default: ~/Library/Application
                             Support/slate-bridge-mac/<vault id>.json)
       --window-start DAY    the window's first day, YYYY-MM-DD, to tell an
@@ -16,6 +17,10 @@ let usage = """
       --attendee-cap N      no attendee list above N (default 12)
       --confirm SOURCE      delete for SOURCE even though its read came back
                             empty (repeatable)
+
+    dump contacts prints every contacts account (container) as JSON, or with
+    --container ID the records that account would project. It reads the real
+    address book, so macOS asks for Contacts access the first time.
     """
 
 func fail(_ message: String) -> Never {
@@ -24,6 +29,35 @@ func fail(_ message: String) -> Never {
 }
 
 var args = Array(CommandLine.arguments.dropFirst())
+
+func printJSON<T: Encodable>(_ value: T) throws {
+    let enc = JSONEncoder()
+    enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+    print(String(decoding: try enc.encode(value), as: UTF8.self))
+}
+
+if args.first == "dump" {
+    guard args.count >= 2, args[1] == "contacts" else { fail("dump what? contacts\n\n\(usage)") }
+    let source = ContactsSource()
+    do {
+        guard try await source.requestAccess() else { fail("Contacts access was not granted") }
+        if args.count == 4, args[2] == "--container" {
+            switch source.read(container: args[3]) {
+            case .complete(let records): try printJSON(records)
+            case .failed(let why): fail(why)
+            case .notRead: fail("not read")
+            }
+        } else if args.count == 2 {
+            try printJSON(try source.containers())
+        } else {
+            fail(usage)
+        }
+    } catch {
+        fail("\(error)")
+    }
+    exit(0)
+}
+
 guard args.first == "sync" else { fail(args.isEmpty ? usage : "unknown command \(args[0])\n\n\(usage)") }
 args.removeFirst()
 
