@@ -59,16 +59,52 @@ public enum ContactLabels {
         return map
     }()
 
+    /// Words some accounts put where a label goes that say nothing about the
+    /// value: vCard's `TYPE=INTERNET` (it is an email address) and `PREF`
+    /// (it is the preferred one), and a literal `null` from Google's sync.
+    static let notLabels: Set<String> = ["internet", "pref", "null", "x-internet"]
+
     /// The slug for a label as the store holds it, or nil for none.
     public static func slug(_ raw: String?) -> String? {
         guard let raw, !raw.isEmpty else { return nil }
         if let known = builtIn[raw] { return known }
+        if notLabels.contains(raw.lowercased()) { return nil }
         // A built-in this table does not know yet: `_$!<SomeName>!$_` as
         // `some_name`, not the literal code.
         if raw.hasPrefix("_$!<"), raw.hasSuffix(">!$_") {
             return Labels.slug(snakeCase(String(raw.dropFirst(4).dropLast(4))))
         }
         return Labels.slug(raw)
+    }
+
+    /// Messaging services by Apple's constants, whose stored values are
+    /// internal names (`AIMInstant`, `GoogleTalkInstant`).
+    static let imServices: [String: String] = [
+        CNInstantMessageServiceAIM: "aim", CNInstantMessageServiceFacebook: "facebook",
+        CNInstantMessageServiceGaduGadu: "gadu_gadu", CNInstantMessageServiceGoogleTalk: "google_talk",
+        CNInstantMessageServiceICQ: "icq", CNInstantMessageServiceJabber: "jabber",
+        CNInstantMessageServiceMSN: "msn", CNInstantMessageServiceQQ: "qq",
+        CNInstantMessageServiceSkype: "skype", CNInstantMessageServiceYahoo: "yahoo",
+    ]
+
+    static let socialServices: [String: String] = [
+        CNSocialProfileServiceFacebook: "facebook", CNSocialProfileServiceFlickr: "flickr",
+        CNSocialProfileServiceLinkedIn: "linkedin", CNSocialProfileServiceMySpace: "myspace",
+        CNSocialProfileServiceSinaWeibo: "sina_weibo", CNSocialProfileServiceTencentWeibo: "tencent_weibo",
+        CNSocialProfileServiceTwitter: "twitter", CNSocialProfileServiceYelp: "yelp",
+        CNSocialProfileServiceGameCenter: "game_center",
+    ]
+
+    /// A messaging service's key part: a known one by its plain name, any
+    /// other as the owner wrote it.
+    public static func imService(_ raw: String?) -> String? {
+        guard let raw, !raw.isEmpty else { return nil }
+        return imServices[raw] ?? Labels.slug(raw.hasSuffix("Instant") ? String(raw.dropLast(7)) : raw)
+    }
+
+    public static func socialService(_ raw: String?) -> String? {
+        guard let raw, !raw.isEmpty else { return nil }
+        return socialServices[raw] ?? Labels.slug(raw)
     }
 
     /// `YoungerSibling` → `Younger Sibling`, `HomeFAX` → `Home FAX`.

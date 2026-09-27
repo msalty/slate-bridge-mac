@@ -20,6 +20,10 @@ import Testing
         // Custom labels are the owner's own words.
         #expect(ContactLabels.slug("Lake house") == "lake_house")
         #expect(ContactLabels.slug(nil) == nil)
+        // Not labels at all: a bare `email:` key.
+        #expect(ContactLabels.slug("INTERNET") == nil)
+        #expect(ContactLabels.slug("null") == nil)
+        #expect(ContactLabels.slug("pref") == nil)
         #expect(ContactLabels.slug("") == nil)
     }
 
@@ -84,6 +88,16 @@ import Testing
         let nameless = CNMutableContact()
         nameless.emailAddresses = [CNLabeledValue(label: nil, value: "who@x.example" as NSString)]
         #expect(ContactsSource.record(nameless).name == "who@x.example")
+    }
+
+    @Test func messagingServicesByTheirPlainNames() {
+        #expect(ContactLabels.imService(CNInstantMessageServiceAIM) == "aim")
+        #expect(ContactLabels.imService(CNInstantMessageServiceGoogleTalk) == "google_talk")
+        #expect(ContactLabels.imService(CNInstantMessageServiceFacebook) == "facebook")
+        #expect(ContactLabels.imService("FooChatInstant") == "foochat")
+        #expect(ContactLabels.imService("Signal") == "signal")
+        #expect(ContactLabels.socialService(CNSocialProfileServiceLinkedIn) == "linkedin")
+        #expect(ContactLabels.socialService("Spark") == "spark")
     }
 
     @Test func socialAndMessagingByService() {

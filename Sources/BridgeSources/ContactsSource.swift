@@ -87,12 +87,12 @@ public final class ContactsSource: @unchecked Sendable {
             social: c.socialProfiles.compactMap { lv in
                 let p = lv.value
                 guard let value = text(p.username) ?? text(p.urlString) else { return nil }
-                return Labeled(Labels.slug(p.service) ?? ContactLabels.slug(lv.label), value)
+                return Labeled(ContactLabels.socialService(p.service) ?? ContactLabels.slug(lv.label), value)
             },
             im: c.instantMessageAddresses.compactMap { lv in
                 let a = lv.value
                 guard let value = text(a.username) else { return nil }
-                return Labeled(Labels.slug(a.service) ?? ContactLabels.slug(lv.label), value)
+                return Labeled(ContactLabels.imService(a.service) ?? ContactLabels.slug(lv.label), value)
             })
     }
 
