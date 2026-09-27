@@ -121,6 +121,14 @@ from that commit.
 - Holiday, birthday and bill calendars are common, often covering the same
   days more than once: the owner chooses in Settings.
 
+### First live sync into a scratch folder
+
+Runs after the first rewrote dozens of Exchange meetings each time: EventKit
+hands Exchange attendees over in a different order on each read. Since
+attendees have been sorted (organizer first, then by name and address), a
+second and third run both reported `0 changed`. `sync --explain` names the
+keys that changed in any rewrite.
+
 ## Order of work
 
 1. **Core + golden files.** Done when every helper-owned example file matches
