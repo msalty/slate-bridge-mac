@@ -5,7 +5,7 @@ import Foundation
 
 let usage = """
     usage: slate-bridge sync --vault DIR --records FILE [options]
-           slate-bridge dump contacts [--container ID]
+           slate-bridge dump contacts [--summary | --container ID]
 
     sync runs one sync into DIR from records in FILE (the format of
     Tests/Fixtures/records.json): the whole pipeline, no permissions needed.
@@ -21,6 +21,8 @@ let usage = """
     dump contacts prints every contacts account (container) as JSON, or with
     --container ID the records that account would project. It reads the real
     address book, so macOS asks for Contacts access the first time.
+    --summary prints counts only, per container: no names, numbers or
+    addresses.
     """
 
 func fail(_ message: String) -> Never {
@@ -36,12 +38,71 @@ func printJSON<T: Encodable>(_ value: T) throws {
     print(String(decoding: try enc.encode(value), as: UTF8.self))
 }
 
+/// Per container: how many cards, which labels, and how far containers
+/// overlap — by uid, and by email address, which is what attendee linking
+/// and name clashes turn on. Counts only; nothing that identifies anyone.
+struct ContainerSummary: Encodable {
+    var name: String
+    var type: String
+    var id: String
+    var read: String
+    var cards = 0
+    var withEmail = 0
+    var uidsAlsoInAnotherContainer = 0
+    var emailsAlsoInAnotherContainer = 0
+    var namesRepeatedInThisContainer = 0
+    var labels: [String: [String: Int]] = [:]
+}
+
+func contactsSummary(_ source: ContactsSource) throws -> [ContainerSummary] {
+    var reads: [(ContactsSource.Container, Read<[ContactRecord]>)] = []
+    for c in try source.containers() { reads.append((c, source.read(container: c.id))) }
+    func records(_ r: Read<[ContactRecord]>) -> [ContactRecord] {
+        if case .complete(let x) = r { x } else { [] }
+    }
+    var uidCount: [String: Int] = [:]
+    var emailCount: [String: Int] = [:]
+    for (_, r) in reads {
+        for uid in Set(records(r).map(\.uid)) { uidCount[uid, default: 0] += 1 }
+        for e in Set(records(r).flatMap { $0.emails.map { $0.value.lowercased() } }) { emailCount[e, default: 0] += 1 }
+    }
+    return reads.map { c, r in
+        var s = ContainerSummary(name: c.name, type: c.type, id: c.id, read: {
+            switch r { case .complete: "complete"; case .failed(let why): "failed: \(why)"; case .notRead: "not read" }
+        }())
+        let all = records(r)
+        s.cards = all.count
+        s.withEmail = all.filter { !$0.emails.isEmpty }.count
+        s.uidsAlsoInAnotherContainer = all.filter { uidCount[$0.uid, default: 0] > 1 }.count
+        s.emailsAlsoInAnotherContainer = Set(all.flatMap { $0.emails.map { $0.value.lowercased() } })
+            .filter { emailCount[$0, default: 0] > 1 }.count
+        var names: [String: Int] = [:]
+        for x in all { names[x.name.lowercased(), default: 0] += 1 }
+        s.namesRepeatedInThisContainer = names.values.filter { $0 > 1 }.reduce(0, +)
+        func tally(_ kind: String, _ labels: [String?]) {
+            for l in labels { s.labels[kind, default: [:]][l ?? "(none)", default: 0] += 1 }
+        }
+        tally("phone", all.flatMap { $0.phones.map(\.label) })
+        tally("email", all.flatMap { $0.emails.map(\.label) })
+        tally("address", all.flatMap { $0.addresses.map(\.label) })
+        tally("url", all.flatMap { $0.urls.map(\.label) })
+        tally("date", all.flatMap { $0.dates.map(\.label) })
+        tally("related", all.flatMap { $0.related.map(\.label) })
+        tally("social", all.flatMap { $0.social.map(\.label) })
+        tally("im", all.flatMap { $0.im.map(\.label) })
+        tally("birthday", all.map { $0.birthday == nil ? nil : ($0.birthday!.year == nil ? "no year" : "with year") }.filter { $0 != nil })
+        return s
+    }
+}
+
 if args.first == "dump" {
     guard args.count >= 2, args[1] == "contacts" else { fail("dump what? contacts\n\n\(usage)") }
     let source = ContactsSource()
     do {
         guard try await source.requestAccess() else { fail("Contacts access was not granted") }
-        if args.count == 4, args[2] == "--container" {
+        if args.count == 3, args[2] == "--summary" {
+            try printJSON(try contactsSummary(source))
+        } else if args.count == 4, args[2] == "--container" {
             switch source.read(container: args[3]) {
             case .complete(let records): try printJSON(records)
             case .failed(let why): fail(why)
