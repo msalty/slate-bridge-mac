@@ -6,6 +6,7 @@ import Foundation
 let usage = """
     usage: slate-bridge sync --vault DIR --records FILE [options]
            slate-bridge dump contacts [--summary | --container ID]
+           slate-bridge dump calendars [--summary | --calendar ID]
 
     sync runs one sync into DIR from records in FILE (the format of
     Tests/Fixtures/records.json): the whole pipeline, no permissions needed.
@@ -23,6 +24,10 @@ let usage = """
     address book, so macOS asks for Contacts access the first time.
     --summary prints counts only, per container: no names, numbers or
     addresses.
+
+    dump calendars does the same for calendars, over the window (a month back,
+    three ahead), and macOS asks for Calendars access the first time.
+    --summary counts occurrences by shape per calendar: no titles, no people.
     """
 
 func fail(_ message: String) -> Never {
@@ -95,8 +100,118 @@ func contactsSummary(_ source: ContactsSource) throws -> [ContainerSummary] {
     }
 }
 
+/// Per calendar, over the window: how many occurrences of each shape the
+/// rules have to handle. Counts only; no titles, no people.
+struct CalendarSummary: Encodable {
+    var account: String
+    var accountType: String
+    var title: String
+    var type: String
+    var id: String
+    var occurrences = 0
+    var allDay = 0
+    var allDayOverOneDay = 0
+    var timedFloating = 0
+    var timedZoned = 0
+    var zones: [String: Int] = [:]
+    var recurringOccurrences = 0
+    var movedOccurrences = 0
+    var cancelled = 0
+    var noExternalID = 0
+    var uidsRepeatedInThisCalendar = 0
+    var uidsAlsoInAnotherCalendarOfTheAccount = 0
+    var withAttendees = 0
+    var overAttendeeCap = 0
+    var attendeesWithoutEmail = 0
+    var withNotes = 0
+    var notesOver500Characters = 0
+    var withJoinLinkInNotesOrLocation = 0
+    var withURLField = 0
+    var bodyAfterCleaningOver500Characters = 0
+}
+
+func calendarsSummary(_ source: EventsSource) -> [CalendarSummary] {
+    let (window, _) = Window.around(Date())
+    let zone = TimeZone.current
+    let cals = source.calendars()
+    var uidsByCalendar: [String: [String]] = [:]
+    var rawsByCalendar: [String: [RawEvent]] = [:]
+    for c in cals {
+        let raws = source.rawEvents(calendar: c.id, window: window) ?? []
+        rawsByCalendar[c.id] = raws
+        uidsByCalendar[c.id] = raws.compactMap { $0.record(floatingZone: zone)?.uid }
+    }
+    return cals.map { c in
+        var s = CalendarSummary(account: c.account, accountType: c.accountType, title: c.title, type: c.type, id: c.id)
+        let raws = rawsByCalendar[c.id] ?? []
+        s.occurrences = raws.count
+        for r in raws {
+            if r.isCancelled { s.cancelled += 1 }
+            if (r.externalID ?? "").isEmpty { s.noExternalID += 1 }
+            if r.isRecurring { s.recurringOccurrences += 1 }
+            if r.isRecurring, let o = r.occurrenceDate, o != r.start { s.movedOccurrences += 1 }
+            if r.url != nil { s.withURLField += 1 }
+            if let n = r.notes, !n.isEmpty {
+                s.withNotes += 1
+                if n.count > 500 { s.notesOver500Characters += 1 }
+            }
+            if [r.notes, r.location].contains(where: { $0.flatMap { JoinLink.find(in: $0) } != nil }) {
+                s.withJoinLinkInNotesOrLocation += 1
+            }
+            guard let rec = r.record(floatingZone: zone) else { continue }
+            switch rec.timing {
+            case .allDay(let first, let last):
+                s.allDay += 1
+                if last > first { s.allDayOverOneDay += 1 }
+            case .timed(_, _, let z):
+                if let z { s.timedZoned += 1; s.zones[z, default: 0] += 1 } else { s.timedFloating += 1 }
+            }
+            let others = rec.attendees.filter { !$0.isCurrentUser }
+            if !others.isEmpty { s.withAttendees += 1 }
+            if others.count > AttendeeLinking.defaultCap { s.overAttendeeCap += 1 }
+            s.attendeesWithoutEmail += rec.attendees.filter { $0.email == nil }.count
+            if let body = rec.notes.flatMap({ ShortBody.make($0, liftedURL: nil) }), body.count > 500 {
+                s.bodyAfterCleaningOver500Characters += 1
+            }
+        }
+        let mine = uidsByCalendar[c.id] ?? []
+        var count: [String: Int] = [:]
+        for u in mine { count[u, default: 0] += 1 }
+        s.uidsRepeatedInThisCalendar = count.values.filter { $0 > 1 }.reduce(0, +)
+        let elsewhere = Set(cals.filter { $0.accountID == c.accountID && $0.id != c.id }.flatMap { uidsByCalendar[$0.id] ?? [] })
+        s.uidsAlsoInAnotherCalendarOfTheAccount = Set(mine).intersection(elsewhere).count
+        return s
+    }
+}
+
+if args.first == "dump", args.count >= 2, args[1] == "calendars" {
+    let source = EventsSource()
+    do {
+        guard try await source.requestAccess() else { fail("Calendars access was not granted") }
+        if args.count == 3, args[2] == "--summary" {
+            try printJSON(calendarsSummary(source))
+        } else if args.count == 4, args[2] == "--calendar" {
+            let (window, _) = Window.around(Date())
+            let (read, problems) = source.read(calendars: [args[3]], window: window)
+            for p in problems { FileHandle.standardError.write(Data("\(p)\n".utf8)) }
+            switch read {
+            case .complete(let records): try printJSON(records)
+            case .failed(let why): fail(why)
+            case .notRead: fail("not read")
+            }
+        } else if args.count == 2 {
+            try printJSON(source.calendars())
+        } else {
+            fail(usage)
+        }
+    } catch {
+        fail("\(error)")
+    }
+    exit(0)
+}
+
 if args.first == "dump" {
-    guard args.count >= 2, args[1] == "contacts" else { fail("dump what? contacts\n\n\(usage)") }
+    guard args.count >= 2, args[1] == "contacts" else { fail("dump what? contacts or calendars\n\n\(usage)") }
     let source = ContactsSource()
     do {
         guard try await source.requestAccess() else { fail("Contacts access was not granted") }
