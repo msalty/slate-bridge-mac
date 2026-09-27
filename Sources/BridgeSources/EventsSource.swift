@@ -88,11 +88,15 @@ public struct RawEvent: Sendable {
     }
 
     /// Everyone invited, organizer included, rooms and equipment left out:
-    /// a room is where, not who.
+    /// a room is where, not who. The organizer first, then everyone else by
+    /// name and address: the order a store hands them over in is not
+    /// something to rewrite a file over (§6.5).
     func people() -> [Attendee] {
         var out: [Attendee] = []
         var seen = Set<String>()
-        for p in (organizer.map { [$0] } ?? []) + attendees where !p.isResource {
+        let key = { (p: RawAttendee) in ((p.name ?? "").lowercased(), (Self.email(p.url) ?? "").lowercased()) }
+        let rest = attendees.sorted { key($0) < key($1) }
+        for p in (organizer.map { [$0] } ?? []) + rest where !p.isResource {
             let email = Self.email(p.url)
             if let key = email?.lowercased() {
                 if seen.contains(key) { continue }

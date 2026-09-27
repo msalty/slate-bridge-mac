@@ -96,11 +96,15 @@ import Testing
         let people = raw.people()
         #expect(people == [
             Attendee(name: "Boss", email: "boss@example.com"),
+            Attendee(name: "Ghost", email: nil),
             Attendee(name: "Jane Doe", email: "jane@example.com"),
             Attendee(name: "Me", email: "me@example.com", isCurrentUser: true),
             Attendee(name: "Sam", email: "sam+work@example.com"),
-            Attendee(name: "Ghost", email: nil),
         ])
+        // However the store orders them.
+        var shuffled = raw
+        shuffled.attendees.reverse()
+        #expect(shuffled.people() == people)
     }
 
     @Test func windowIsAMonthBackAndThreeAhead() {
