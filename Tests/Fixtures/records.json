@@ -1,0 +1,84 @@
+{
+  "accounts": [
+    {
+      "source": "fastmail",
+      "folder": "Fastmail",
+      "contacts": [
+        {
+          "uid": "jane-doe@fastmail.com",
+          "name": "Jane Doe",
+          "nickname": "Janey",
+          "org": "Example Corp",
+          "department": "Design",
+          "job_title": "Head of Design",
+          "phones": [
+            { "label": "mobile", "value": "+1 555 0143" },
+            { "label": "work", "value": "+1 555 0100" }
+          ],
+          "emails": [
+            { "label": "home", "value": "jane@example.com" },
+            { "label": "home", "value": "jd@me.com" },
+            { "label": "work", "value": "j.doe@work.example" }
+          ],
+          "addresses": [
+            { "label": "home", "value": ["12 Rua Augusta", "1100-053 Lisboa", "Portugal"] }
+          ],
+          "urls": [{ "label": "homepage", "value": "https://jane.example" }],
+          "birthday": "1984-03-02",
+          "dates": [{ "label": "anniversary", "value": "2010-06-14" }],
+          "related": [{ "label": "spouse", "value": "Sam Doe" }]
+        }
+      ],
+      "events": [
+        {
+          "uid": "3f2a9c@fastmail.com",
+          "title": "Design review",
+          "start": "2026-09-21T09:30",
+          "end": "2026-09-21T10:00",
+          "location": "Room 4B",
+          "url": "https://meet.example/abc",
+          "calendar": "Work",
+          "notes": "Walk through the onboarding flow before it goes to build.",
+          "attendees": [
+            { "name": "Jane Doe", "email": "jane@example.com" },
+            { "name": "Mike", "email": "mike@fastmail.example", "me": true },
+            { "name": "Sam Ortiz", "email": "sam@ortiz.example" }
+          ]
+        },
+        {
+          "uid": "b7c1e0@fastmail.com",
+          "title": "Office closed",
+          "start": "2026-09-21",
+          "end": "2026-09-22",
+          "calendar": "Personal"
+        }
+      ]
+    },
+    {
+      "source": "work",
+      "folder": "Work",
+      "contacts": [
+        {
+          "uid": "jane-doe@work.example",
+          "name": "Jane Doe",
+          "org": "Example Corp",
+          "emails": [{ "label": "work", "value": "jane.doe@example.org" }],
+          "birthday": "--03-02"
+        }
+      ],
+      "events": [
+        {
+          "uid": "0e9d44@work.example",
+          "title": "Tokyo sync",
+          "start": "2026-10-01T00:30",
+          "end": "2026-10-01T01:00",
+          "tz": "Asia/Tokyo",
+          "attendees": [{ "name": "Jane Doe", "email": "Jane.Doe@example.org" }]
+        }
+      ]
+    }
+  ],
+  "priorNames": {
+    "fastmail": { "jane-doe@fastmail.com": ["Jane Smith", "JD"] }
+  }
+}
