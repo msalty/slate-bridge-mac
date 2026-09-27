@@ -100,6 +100,26 @@ from that commit.
     map from Apple's constants to plain names (`AIMInstant` → `aim`,
     `GoogleTalkInstant` → `google_talk`). Exchange stores its IM field as AIM,
     and that is written as it is: `im_aim`.
+19. **Selection is kept by account** (`LiveSources.Selection`: account key →
+    calendar and container ids) and stored, never recomputed on each run. A
+    chosen calendar that has gone then fails its own account's read, and its
+    meetings aren't taken for cancelled. The defaults leave out birthday and
+    subscribed calendars and contact groups.
+20. **Accounts pair by name** across Calendar and Contacts, where an
+    account usually has the same name on both sides. The `source:` slug is the
+    name's slug, and the folder can be renamed in settings.
+
+### What a live calendar read showed (`dump calendars --summary`)
+
+- Every occurrence had an external identifier. A uid can sit in two
+  calendars of one account; it is projected once, from the first.
+- Timed events from Google and Exchange all carried a zone (none floating),
+  so meeting files nearly always carry `tz:`. Suggest to Slate: label a zone
+  on the agenda only when it differs from the device's.
+- Exchange meetings often go above the attendee cap and carry long
+  descriptions with a join link in them.
+- Holiday, birthday and bill calendars are common, often covering the same
+  days more than once: the owner chooses in Settings.
 
 ## Order of work
 
@@ -139,5 +159,5 @@ from that commit.
 - [x] 2 Writer
 - [x] 3 CLI (`--records` only until the sources exist)
 - [x] 4 Contacts source (checked with `dump contacts --summary`)
-- [ ] 5 Events source
+- [x] 5 Events source (checked with `dump calendars --summary`; `sync --live` into a scratch folder next)
 - [ ] 6 App
