@@ -90,6 +90,16 @@ from that commit.
 16. **Short bodies**: cut at the first line of conference boilerplate, lift the
     join link into `url:` and out of the prose, keep at most ~500 characters
     ending in `…`.
+17. **One card, one file.** Exchange shows its contacts folder as a container
+    (`…:ABGroup`) beside the account (`…:ABAccount`), holding the same cards,
+    every id shared. Group containers are
+    off by default in Settings, and a sync skips a card an earlier account
+    already gave, reporting it.
+18. **Labels that aren't labels** (`INTERNET`, `pref`, a literal `null` from
+    Google) count as none, giving a bare key. Messaging and social services
+    map from Apple's constants to plain names (`AIMInstant` → `aim`,
+    `GoogleTalkInstant` → `google_talk`). Exchange stores its IM field as AIM,
+    and that is written as it is: `im_aim`.
 
 ## Order of work
 
@@ -128,6 +138,6 @@ from that commit.
 - [x] 1 Core + golden files
 - [x] 2 Writer
 - [x] 3 CLI (`--records` only until the sources exist)
-- [ ] 4 Contacts source
+- [x] 4 Contacts source (checked with `dump contacts --summary`)
 - [ ] 5 Events source
 - [ ] 6 App
