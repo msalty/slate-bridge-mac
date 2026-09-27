@@ -127,3 +127,23 @@ public struct ContactRecord: Hashable, Sendable {
         self.im = im
     }
 }
+
+/// The outcome of reading one kind of record from one account.
+public enum Read<Records: Sendable>: Sendable {
+    /// Everything the account has, in the window for events. The only kind of
+    /// read that may delete anything.
+    case complete(Records)
+    /// No permission, a calendar or account missing, an error: nothing is
+    /// deleted for this account, and the reason is reported.
+    case failed(String)
+    /// This account does not have this kind of record, or it was not asked for.
+    case notRead
+}
+
+extension Read {
+    public var isComplete: Bool { if case .complete = self { true } else { false } }
+}
+
+extension Read where Records: Collection {
+    public var isEmpty: Bool { if case .complete(let r) = self { r.isEmpty } else { false } }
+}

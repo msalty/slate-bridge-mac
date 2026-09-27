@@ -1,18 +1,6 @@
 import BridgeCore
 import Foundation
 
-/// The outcome of reading one kind of record from one account.
-public enum Read<Records: Sendable>: Sendable {
-    /// Everything the account has, in the window for events. The only kind of
-    /// read that may delete anything.
-    case complete(Records)
-    /// No permission, a calendar or account missing, an error: nothing is
-    /// deleted for this account, and the reason is reported.
-    case failed(String)
-    /// This account does not have this kind of record, or it was not asked for.
-    case notRead
-}
-
 public struct AccountRead: Sendable {
     /// The provider slug, written as `source:`. Fixed for the life of the account.
     public var source: String
@@ -413,14 +401,6 @@ public enum SyncError: Error, CustomStringConvertible {
 protocol Identified { var uid: String { get } }
 extension EventRecord: Identified {}
 extension ContactRecord: Identified {}
-
-extension Read {
-    var isComplete: Bool { if case .complete = self { true } else { false } }
-}
-
-extension Read where Records: Collection {
-    var isEmpty: Bool { if case .complete(let r) = self { r.isEmpty } else { false } }
-}
 
 extension AccountRead {
     /// The reads a `RecordSet` stands for: an account marked `failed` failed
