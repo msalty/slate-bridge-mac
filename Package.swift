@@ -6,11 +6,16 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "BridgeCore", targets: ["BridgeCore"]),
+        .library(name: "BridgeWriter", targets: ["BridgeWriter"]),
     ],
     targets: [
         // Records to files. Foundation and CryptoKit only: no EventKit, no
         // Contacts, no file system. Tested against the example vault.
         .target(name: "BridgeCore"),
+        // §6.2 and §6.5 against a real folder: the manifest, ownership,
+        // following files by uid:, deletion, byte-compared atomic writes.
+        .target(name: "BridgeWriter", dependencies: ["BridgeCore"]),
         .testTarget(name: "BridgeCoreTests", dependencies: ["BridgeCore"]),
+        .testTarget(name: "BridgeWriterTests", dependencies: ["BridgeCore", "BridgeWriter"]),
     ]
 )
