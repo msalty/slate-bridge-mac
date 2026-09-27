@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "BridgeCore", targets: ["BridgeCore"]),
         .library(name: "BridgeWriter", targets: ["BridgeWriter"]),
+        .executable(name: "slate-bridge", targets: ["slate-bridge"]),
     ],
     targets: [
         // Records to files. Foundation and CryptoKit only: no EventKit, no
@@ -15,6 +16,8 @@ let package = Package(
         // §6.2 and §6.5 against a real folder: the manifest, ownership,
         // following files by uid:, deletion, byte-compared atomic writes.
         .target(name: "BridgeWriter", dependencies: ["BridgeCore"]),
+        // One sync into a given folder.
+        .executableTarget(name: "slate-bridge", dependencies: ["BridgeCore", "BridgeWriter"]),
         .testTarget(name: "BridgeCoreTests", dependencies: ["BridgeCore"]),
         .testTarget(name: "BridgeWriterTests", dependencies: ["BridgeCore", "BridgeWriter"]),
     ]
