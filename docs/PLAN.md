@@ -67,13 +67,17 @@ from that commit.
 8. **Not sandboxed**, hardened runtime, signed with the owner's free Personal
    Team so permissions survive rebuilds. The manifest lives at
    `~/Library/Application Support/slate-bridge-mac/<vault-id>.json` and the
-   vault is kept as a security-scoped bookmark anyway. The vault id is stored
-   with the bookmark, so it survives the vault moving.
+   vault is kept as a security-scoped bookmark anyway. The vault id is a hash
+   of the vault's real path, so the app and the CLI share one manifest. When
+   the bookmark finds the vault moved, the app moves the manifest to the new id.
 9. **Provider slug** comes from the account name the first time an account is
    seen, then stays fixed in settings. Renaming a folder doesn't change it.
-10. **Suspiciously empty read** (a calendar or container that had files now
-    returns nothing) is a failed read for that account: no deletions, reported,
-    and a "Confirm deletions" action in the menu.
+10. **Suspiciously empty read** (an account whose events, or contacts, had
+    files and now returns none) is treated as a failed read for that kind: no
+    deletions, reported, and a "Confirm deletions" action in the menu
+    (`SyncOptions.confirmedEmpty`). This is checked per account, not per
+    calendar. A selected calendar that is missing fails the whole account's
+    read in the source.
 11. **Deselecting** a calendar or container deletes its files on the next
     sync, still under the three-condition rule.
 12. **No `Calendar/Subscribed/` migration**: no earlier helper wrote those files.
@@ -122,8 +126,8 @@ from that commit.
 ## Progress
 
 - [x] 1 Core + golden files
-- [ ] 2 Writer
-- [ ] 3 CLI
+- [x] 2 Writer
+- [x] 3 CLI (`--records` only until the sources exist)
 - [ ] 4 Contacts source
 - [ ] 5 Events source
 - [ ] 6 App
