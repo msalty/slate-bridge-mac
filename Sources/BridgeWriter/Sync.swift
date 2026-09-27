@@ -8,12 +8,16 @@ public struct AccountRead: Sendable {
     public var folder: String
     public var contacts: Read<[ContactRecord]>
     public var events: Read<[EventRecord]>
+    /// What the source noticed while reading: records it skipped, and why.
+    public var problems: [String]
 
-    public init(source: String, folder: String, contacts: Read<[ContactRecord]>, events: Read<[EventRecord]>) {
+    public init(source: String, folder: String, contacts: Read<[ContactRecord]>, events: Read<[EventRecord]>,
+                problems: [String] = []) {
         self.source = source
         self.folder = folder
         self.contacts = contacts
         self.events = events
+        self.problems = problems
     }
 }
 
@@ -89,6 +93,7 @@ public final class Sync {
     }
 
     func run(_ accounts: [AccountRead]) throws {
+        for a in accounts { report.problems += a.problems.map { "\(a.folder): \($0)" } }
         for path in vault.allFiles() where Vault.isNote(path) && !Vault.isBackstage(path) {
             stems[Vault.stem(path).lowercased(), default: 0] += 1
         }
