@@ -147,3 +147,24 @@ extension Read {
 extension Read where Records: Collection {
     public var isEmpty: Bool { if case .complete(let r) = self { r.isEmpty } else { false } }
 }
+
+/// One account's reads, for one sync.
+public struct AccountRead: Sendable {
+    /// The provider slug, written as `source:`. Fixed for the life of the account.
+    public var source: String
+    /// The account's folder name under both roots.
+    public var folder: String
+    public var contacts: Read<[ContactRecord]>
+    public var events: Read<[EventRecord]>
+    /// What the source noticed while reading: records it skipped, and why.
+    public var problems: [String]
+
+    public init(source: String, folder: String, contacts: Read<[ContactRecord]>, events: Read<[EventRecord]>,
+                problems: [String] = []) {
+        self.source = source
+        self.folder = folder
+        self.contacts = contacts
+        self.events = events
+        self.problems = problems
+    }
+}
