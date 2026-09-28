@@ -24,5 +24,10 @@ The format contract is in msalty/slate, cloned at `../slate` (branch
 ## Commands
 
 - `swift build`, `swift test`
+- `scripts/build-app.sh` builds and signs `build/Slate Bridge.app` (needs the
+  owner's Apple Development identity).
+- `swift run slate-bridge sync --vault DIR --records FILE` or `--live`, and
+  `slate-bridge dump contacts|calendars --summary`. Live reads need Terminal
+  or the app to have been granted access, not this session's shell.
 - `node scripts/name-vectors.mjs ../slate > Tests/Fixtures/name-vectors.json`
   regenerates the filename vectors from Slate's TypeScript.
