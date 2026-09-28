@@ -26,8 +26,15 @@ cp "$BIN" "$APP/Contents/MacOS/SlateBridge"
 cp Support/Info.plist "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
+# The icon, drawn from source each build (scripts/make-icon.swift).
+rm -rf build/AppIcon.iconset
+swift scripts/make-icon.swift build/AppIcon.iconset
+iconutil -c icns build/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
+
 codesign --force --timestamp=none --options runtime \
   --entitlements Support/SlateBridge.entitlements \
   --sign "$IDENTITY" "$APP"
 codesign --verify --strict "$APP"
+# Finder caches icons by bundle; a touch makes it look again.
+touch "$APP"
 echo "Built and signed: $APP"
