@@ -92,9 +92,8 @@ from that commit.
     ending in `…`.
 17. **One card, one file.** Exchange shows its contacts folder as a container
     (`…:ABGroup`) beside the account (`…:ABAccount`), holding the same cards,
-    every id shared. Group containers are
-    off by default in Settings, and a sync skips a card an earlier account
-    already gave, reporting it.
+    every id shared. Group containers are off by default in Settings, and a
+    sync skips a card an earlier account already gave, reporting it.
 18. **Labels that aren't labels** (`INTERNET`, `pref`, a literal `null` from
     Google) count as none, giving a bare key. Messaging and social services
     map from Apple's constants to plain names (`AIMInstant` → `aim`,
@@ -105,9 +104,9 @@ from that commit.
     chosen calendar that has gone then fails its own account's read, and its
     meetings aren't taken for cancelled. The defaults leave out birthday and
     subscribed calendars and contact groups.
-20. **Accounts pair by name** across Calendar and Contacts, where an
-    account usually has the same name on both sides. The `source:` slug is the
-    name's slug, and the folder can be renamed in settings.
+20. **Accounts pair by name** across Calendar and Contacts, where an account
+    usually has the same name on both sides. The `source:` slug is the name's
+    slug, and the folder can be renamed in settings.
 
 ### What a live calendar read showed (`dump calendars --summary`)
 
@@ -168,4 +167,4 @@ keys that changed in any rewrite.
 - [x] 3 CLI (`--records` only until the sources exist)
 - [x] 4 Contacts source (checked with `dump contacts --summary`)
 - [x] 5 Events source (checked with `dump calendars --summary`; `sync --live` into a scratch folder next)
-- [ ] 6 App
+- [x] 6 App (menu bar, settings, scheduling, login item, icon; `scripts/build-app.sh`)
