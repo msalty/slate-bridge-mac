@@ -161,6 +161,10 @@ The package has five targets:
 | `slate-bridge` | The command-line tool. |
 | `SlateBridge` | The menu-bar app. `scripts/build-app.sh` bundles and signs it, and `scripts/make-icon.swift` draws its icon. |
 
+`scripts/build-app.sh --release` makes the zip for a GitHub release. It is
+signed ad hoc, so no certificate or name is in it, and it is stripped of the
+build machine's paths.
+
 How it is tested:
 
 - **Golden files.** Slate's example vault is copied into `Tests/Fixtures/vault`.
