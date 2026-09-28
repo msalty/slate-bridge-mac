@@ -59,7 +59,11 @@ public final class LiveSources: @unchecked Sendable {
         selection.accounts.map { key in
             var problems: [String] = []
             let eventRead: Read<[EventRecord]>
-            if let ids = selection.calendars[key], !ids.isEmpty {
+            // An account whose calendars were all unticked reads as empty,
+            // which the writer asks to have confirmed before deleting.
+            if let ids = selection.calendars[key], ids.isEmpty {
+                eventRead = .complete([])
+            } else if let ids = selection.calendars[key] {
                 // Calendar order: by title, so the calendar a shared meeting is
                 // taken from is the same on every run.
                 let present = events.calendars().filter { ids.contains($0.id) }
@@ -74,7 +78,9 @@ public final class LiveSources: @unchecked Sendable {
                 eventRead = .notRead
             }
             let contactRead: Read<[ContactRecord]>
-            if let ids = selection.containers[key], !ids.isEmpty {
+            if let ids = selection.containers[key], ids.isEmpty {
+                contactRead = .complete([])
+            } else if let ids = selection.containers[key] {
                 var all: [ContactRecord] = []
                 var failure: String?
                 for id in ids.sorted() {

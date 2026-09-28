@@ -27,6 +27,9 @@ public struct SyncReport: Sendable, CustomStringConvertible {
     public var details: [String: [String]] = [:]
     /// Worth the owner's attention: failed reads, hand edits, duplicates.
     public var problems: [String] = []
+    /// Accounts whose read came back empty where they had files: nothing
+    /// of theirs is deleted until the owner confirms (`confirmedEmpty`).
+    public var unconfirmedEmpty: [String] = []
     /// Live files by kind after the run.
     public var events = 0
     public var contacts = 0
@@ -361,6 +364,7 @@ public final class Sync {
         if empty, live, !options.confirmedEmpty.contains(a.source) {
             report.problems.append("\(a.folder): no \(kind == .event ? "events" : "contacts") came back; "
                 + "nothing deleted until confirmed")
+            if !report.unconfirmedEmpty.contains(a.source) { report.unconfirmedEmpty.append(a.source) }
             return
         }
         for (uid, entry) in stale {

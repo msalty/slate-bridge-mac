@@ -326,6 +326,7 @@ import Testing
         let r = try h.sync()
         #expect(r.changes.isEmpty)
         #expect(r.problems == ["Fastmail: no events came back; nothing deleted until confirmed"])
+        #expect(r.unconfirmedEmpty == ["fastmail"])
         #expect(h.exists(designReview) && h.exists(officeClosed))
         h.options.confirmedEmpty = ["fastmail"]
         let confirmed = try h.sync()
