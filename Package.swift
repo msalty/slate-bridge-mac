@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "BridgeCore", targets: ["BridgeCore"]),
         .library(name: "BridgeWriter", targets: ["BridgeWriter"]),
         .executable(name: "slate-bridge", targets: ["slate-bridge"]),
+        .executable(name: "SlateBridge", targets: ["SlateBridge"]),
     ],
     targets: [
         // Records to files. Foundation and CryptoKit only: no EventKit, no
@@ -20,6 +21,9 @@ let package = Package(
         .target(name: "BridgeSources", dependencies: ["BridgeCore"]),
         // One sync into a given folder.
         .executableTarget(name: "slate-bridge", dependencies: ["BridgeCore", "BridgeWriter", "BridgeSources"]),
+        // The menu-bar app. scripts/build-app.sh wraps it in Slate Bridge.app
+        // with its Info.plist and entitlements (Support/) and signs it.
+        .executableTarget(name: "SlateBridge", dependencies: ["BridgeCore", "BridgeWriter", "BridgeSources"]),
         .testTarget(name: "BridgeCoreTests", dependencies: ["BridgeCore"]),
         .testTarget(name: "BridgeWriterTests", dependencies: ["BridgeCore", "BridgeWriter"]),
         // In-memory records only: nothing here asks for a permission.
